@@ -59,7 +59,7 @@ def load_mnist(train_images_file, train_labels_file, test_images_file, test_labe
     'train-images-idx3-ubyte', 'train-labels-idx1-ubyte',
     't10k-images-idx3-ubyte', 't10k-labels-idx1-ubyte'
 )
-
+#print(train_images[0])
 
 import numpy as np
 
@@ -71,17 +71,23 @@ def sigmoid(x):
 def sigmoid_derivative(x):
     return x * (1 - x)
 
-# Función de activación softmax
+"""# Función de activación softmax
 def softmax(x):
     exp_x = np.exp(x - np.max(x))
     return exp_x / np.sum(exp_x, axis=0)
+"""
+def softmax(x):
+    exp_x = np.exp(x - np.max(x, axis=1, keepdims=True))  # Restamos el máximo para estabilidad numérica
+    return exp_x / np.sum(exp_x, axis=1, keepdims=True)  # Normalizamos sobre el eje de las clases (axis=1)
+
 
 # Inicializar pesos aleatorios
 def initialize_weights(input_size, hidden_size, output_size):
-    W1 = np.random.randn(hidden_size, input_size) * 0.01
-    W2 = np.random.randn(output_size, hidden_size) * 0.01
+    W1 = np.random.randn(hidden_size, input_size) * 0.05
+    W2 = np.random.randn(output_size, hidden_size) * 0.05
     b1 = np.zeros((hidden_size, 1))
     b2 = np.zeros((output_size, 1))
+
     return W1, b1, W2, b2
 
 # Propagación hacia adelante
@@ -121,6 +127,13 @@ def compute_loss(A2, Y):
     loss = -np.sum(logprobs) / m
     return loss
 
+# Funcion para la precision
+def compute_accuracy(predictions, labels):
+    correct_predictions = np.sum(predictions == np.argmax(labels, axis=0))
+    total_predictions = labels.shape[1]
+    accuracy = correct_predictions / total_predictions
+    return accuracy
+
 # Entrenamiento del modelo
 def train(X, Y, input_size, hidden_size, output_size, epochs, learning_rate):
     W1, b1, W2, b2 = initialize_weights(input_size, hidden_size, output_size)
@@ -131,9 +144,13 @@ def train(X, Y, input_size, hidden_size, output_size, epochs, learning_rate):
         dW1, db1, dW2, db2 = backpropagation(X, Y, Z1, A1, Z2, A2, W2)
         W1, b1, W2, b2 = update_parameters(W1, b1, W2, b2, dW1, db1, dW2, db2, learning_rate)
 
+        # Calcular precisión
+        predictions = predict(X, W1, b1, W2, b2)
+        accuracy = compute_accuracy(predictions, Y)
+
         if epoch % 100 == 0:
             print(f"Epoch {epoch} - Loss: {loss}")
-
+        print(epoch,' Loss: ',loss,' accuracy ',accuracy)
     return W1, b1, W2, b2
 
 # Predicción
@@ -151,9 +168,8 @@ hidden_size = 128  # Tamaño de la capa oculta
 output_size = 10   # Dígitos (0-9)
 
 # Entrenar la red
-epochs = 1000
+epochs = 100
 learning_rate = 0.01
-
 
 
 X_train = train_images.T  # Transpone para que quede como (784, 60000)
@@ -164,6 +180,45 @@ W1, b1, W2, b2 = train(X_train, Y_train, input_size, hidden_size, output_size, e
 # Para una nueva imagen, realiza la predicción
 # predicción = predict(X_test, W1, b1, W2, b2)
 
+
+
+
+#save the model
+import pickle
+with open('model.pkl', 'wb') as file:
+    pickle.dump([W1, b1, W2, b2], file)
+
+#load the model
+with open('model.pkl', 'rb') as file:
+    W1, b1, W2, b2 = pickle.load(file)
+
+# Para una nueva imagen, realiza la predicción
+# predicción = predict(X_test, W1, b1, W2, b2)
+
+
+
+#cargar modelo y hacer predicciones
+import pickle
+with open('model.pkl', 'rb') as file:
+    W1, b1, W2, b2 = pickle.load(file)
+
+
+# Para una nueva imagen, realiza la predicción
+import numpy as np  
+
+def transformLabels(y_test):
+    # Si y_test es un vector de etiquetas one-hot codificadas, convierte cada vector en el índice de la clase
+    return np.argmax(y_test, axis=1)            
+
+
+
+
 X_test = test_images.T
+Y_test = test_labels.T
 predictions = predict(X_test, W1, b1, W2, b2)
+print(predictions[0])
+Y_valores = transformLabels(Y_train)
+print(predictions[:10])
+print(Y_valores[:10])
+print('Accuracy: ',compute_accuracy(predictions,Y_test))
 
