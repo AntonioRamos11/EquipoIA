@@ -71,26 +71,13 @@ def sigmoid(x):
 def sigmoid_derivative(x):
     return x * (1 - x)
 
-"""# Función de activación softmax
+# Función de activación softmax
 def softmax(x):
     exp_x = np.exp(x - np.max(x))
     return exp_x / np.sum(exp_x, axis=0)
-"""
-def softmax(x):
-    exp_x = np.exp(x - np.max(x, axis=1, keepdims=True))  # Restamos el máximo para estabilidad numérica
-    return exp_x / np.sum(exp_x, axis=1, keepdims=True)  # Normalizamos sobre el eje de las clases (axis=1)
 
-
-
-def initialize_weights(input_size, hidden_size, output_size):
-    W1 = np.random.randn(hidden_size, input_size) * np.sqrt(2. / input_size)  # He initialization
-    W2 = np.random.randn(output_size, hidden_size) * np.sqrt(2. / hidden_size)  # He initialization
-    b1 = np.zeros((hidden_size, 1))
-    b2 = np.zeros((output_size, 1))
-
-    return W1, b1, W2, b2
 # Inicializar pesos aleatorios
-def initialize_weights2(input_size, hidden_size, output_size):
+def initialize_weights(input_size, hidden_size, output_size):
     W1 = np.random.randn(hidden_size, input_size) * 0.05
     W2 = np.random.randn(output_size, hidden_size) * 0.05
     b1 = np.zeros((hidden_size, 1))
@@ -172,12 +159,12 @@ def predict(X, W1, b1, W2, b2):
 
 # Tamaños de la red
 input_size = 784  # 28x28 píxeles
-hidden_size = 128  # Tamaño de la capa oculta
+hidden_size = 300  # Tamaño de la capa oculta
 output_size = 10   # Dígitos (0-9)
 
 # Entrenar la red
-epochs = 100
-learning_rate = 0.01
+epochs = 50
+learning_rate = 0.001
 
 
 X_train = train_images.T  # Transpone para que quede como (784, 60000)
@@ -188,36 +175,9 @@ W1, b1, W2, b2 = train(X_train, Y_train, input_size, hidden_size, output_size, e
 # Para una nueva imagen, realiza la predicción
 # predicción = predict(X_test, W1, b1, W2, b2)
 
-
-
-
-#save the model
-import pickle
-with open('model.pkl', 'wb') as file:
-    pickle.dump([W1, b1, W2, b2], file)
-
-#load the model
-with open('model.pkl', 'rb') as file:
-    W1, b1, W2, b2 = pickle.load(file)
-
-# Para una nueva imagen, realiza la predicción
-# predicción = predict(X_test, W1, b1, W2, b2)
-
-
-
-#cargar modelo y hacer predicciones
-import pickle
-with open('model.pkl', 'rb') as file:
-    W1, b1, W2, b2 = pickle.load(file)
-
-
-# Para una nueva imagen, realiza la predicción
-import numpy as np  
-
 def transformLabels(y_test):
     # Si y_test es un vector de etiquetas one-hot codificadas, convierte cada vector en el índice de la clase
-    return np.argmax(y_test, axis=1)            
-
+    return np.argmax(y_test, axis=1)
 
 
 
@@ -229,4 +189,40 @@ Y_valores = transformLabels(Y_train)
 print(predictions[:10])
 print(Y_valores[:10])
 print('Accuracy: ',compute_accuracy(predictions,Y_test))
+
+def forward_propagation2(X, W1, b1, W2, b2):
+    Z1 = np.dot(W1, X.T) + b1  # Nota el uso de X.T para alinear dimensiones
+    A1 = sigmoid(Z1)
+    Z2 = np.dot(W2, A1) + b2
+    A2 = softmax(Z2)
+    return Z1, A1, Z2, A2
+
+
+def predict2(image, W1, b1, W2, b2):
+    # Asegúrate de que la imagen tenga la forma correcta
+    if image.shape != (784,):
+        image = image.reshape(1, 784)  # Añadir una dimensión de lote si es necesario
+    
+    _, _, _, A2 = forward_propagation2(image, W1, b1, W2, b2)
+    # Supongamos que A2 es el vector de probabilidades para cada clase
+    return np.argmax(A2, axis=1)  # Devuelve la clase con mayor probabilidad
+
+from PIL import Image
+
+
+def load_and_preprocess_image(image_path):
+    img = Image.open(image_path).convert('L')  # Convertir a escala de grises
+    img = img.resize((28, 28))  # Redimensionar a 28x28 píxeles
+    img_array = np.array(img)  # Convertir la imagen a un array NumPy
+    img_array = img_array.flatten()  # Aplanar la imagen
+    img_array = img_array / 255.0  # Normalizar los valores de los píxeles a [0, 1]
+    return img_array
+
+
+
+
+#cargar modelo y hacer predicciones
+import pickle
+with open('model.pkl', 'rb') as file:
+    W1, b1, W2, b2 = pickle.load(file)
 
